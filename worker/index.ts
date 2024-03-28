@@ -1,3 +1,5 @@
+const fs = require("fs");
+
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
 
@@ -11,19 +13,23 @@ const connection = new IORedis({
   maxRetriesPerRequest: null,
 });
 
-new Worker(
+const worker = new Worker(
   "imageProcessing",
   async (task: IJob) => {
     const imagePath = "./tmp/" + task.id;
     await Storage.downloadFile(task.data.parentId, task.data.path, imagePath);
 
-    // get the image as image base64 link
-    const image = await Bun.file(imagePath).text();
-    const base64 = btoa(image);
+    const fileBuffer = fs.readFileSync(imagePath); // todo make it async
+    const base64String = fileBuffer.toString("base64");
 
-    const response = AI.generateTextFromMultiData([base64]);
+    const text = await AI.generateTextFromMultiData(
+      [base64String],
+      [
+        "give me the name of the food or item be precise and return only one word",
+      ]
+    );
 
-    await connection.hset(task.data.parentId, response);
+    await connection.hset("results", task.data.parentId, text);
 
     await new Promise((res) => setTimeout(res, 1000));
     return task.data;
@@ -37,3 +43,7 @@ new Worker(
     },
   }
 );
+
+worker.on("ready", () => {
+  console.log("Worker(" + worker.name + ") is active id=" + worker.id);
+});

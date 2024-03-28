@@ -39,6 +39,25 @@ const generativeModel = vertex_ai.preview.getGenerativeModel({
   ] as any,
 });
 
-export async function generateTextFromMultiData(prompts: string[]) {
-  return "hello world";
+export async function generateTextFromMultiData(
+  base64Images: string[],
+  text: string[]
+) {
+  const req = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          ...base64Images.map((base64) => ({
+            inline_data: { mime_type: "image/png", data: base64 },
+          })),
+          ...text.map((text) => ({ text: text })),
+        ],
+      },
+    ],
+  };
+
+  const streamingResp = await generativeModel.generateContent(req);
+
+  return streamingResp.response?.candidates[0]?.content?.parts[0].text?.trim()??"";
 }
