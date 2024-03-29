@@ -81,11 +81,11 @@ export default function Home() {
 
     await uploadImage(imgSrc, hash);
 
-    await keepCheckingScan(hash);
+    const label = await keepCheckingScan(hash);
 
     setTimeout(() => {
       window.open(
-        "https://rnm.franceagrimer.fr/prix?FRUITS-ET-LEGUMES",
+        "https://rnm.franceagrimer.fr/prix?" + label.toUpperCase(),
         "_blank"
       );
     }, 1000);
@@ -105,22 +105,19 @@ export default function Home() {
     setProgress((p) => ({ ...p, upload: 100 }));
   };
 
-  const keepCheckingScan = (hash: string) => {
-    const timer = setInterval(() => {
-      console.log("hello");
-      setProgress((p) => ({
-        ...p,
-        scan: Math.min(90, p.scan + Math.random() * 10 + 1),
-      }));
-    }, 100);
+  const keepCheckingScan = async (hash: string) => {
+    let label: string | null = null;
+    let i = 0;
+    while (label == null) {
+      const response = await fetch(`/api/token/${hash}`);
+      setProgress({ ...progress, scan: i });
+      i += Math.random() * 10;
+      const data = await response.json();
+      label = data.label;
+    }
+    setProgress({ ...progress, scan: 100 });
 
-    return new Promise((r) => {
-      setTimeout(() => {
-        clearInterval(timer);
-        setProgress((p) => ({ ...p, scan: 100 }));
-        r(null);
-      }, 3000);
-    });
+    return label;
   };
 
   return (
