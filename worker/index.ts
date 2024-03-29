@@ -5,12 +5,15 @@ import IORedis from "ioredis";
 
 import * as AI from "./repositories/ai";
 import type { IJob } from "./types";
+import { FOODS } from "./repositories/data";
 
 const connection = new IORedis({
     host: "redis",
     port: 6379,
     maxRetriesPerRequest: null,
 });
+
+
 
 const worker = new Worker(
     "imageProcessing",
@@ -24,9 +27,8 @@ const worker = new Worker(
 
         const text = await AI.generateTextFromMultiData(
             [base64String],
-            [
-                "give me the name of the food or item be precise and return only one word, when i search with that name the above picture appeas. again only one word and when it's extremly urgent give me second name",
-            ]
+            [`the above picture represent a item from this list ${FOODS}. your instruction is to return only one item from the list that represent 100% the picture, never return anything outside the given list of items. the answer is in french and from the given list
+            `]
         );
 
         console.log(text, task.name);
