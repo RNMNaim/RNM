@@ -95,7 +95,7 @@ export default function Home() {
     const file = await urlToFile(capturedImage, "image.png", "image/png");
 
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("profilePicture", file);
 
     await fetch("/upload/" + hash, {
       method: "POST",
