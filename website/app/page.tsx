@@ -79,7 +79,7 @@ export default function Home() {
     );
     setProgress({ ...progress, token: 100 });
 
-    await uploadImage(imgSrc);
+    await uploadImage(imgSrc, hash);
 
     await keepCheckingScan(hash);
 
@@ -91,24 +91,18 @@ export default function Home() {
     }, 1000);
   }
 
-  const uploadImage = async (capturedImage: string) => {
+  const uploadImage = async (capturedImage: string, hash: string) => {
     const file = await urlToFile(capturedImage, "image.png", "image/png");
 
-    const timer = setInterval(() => {
-      console.log("hello");
-      setProgress((p) => ({
-        ...p,
-        upload: Math.min(90, p.upload + Math.random() * 10 + 1),
-      }));
-    }, 50);
+    const formData = new FormData();
+    formData.append("image", file);
 
-    return new Promise((r) => {
-      setTimeout(() => {
-        clearInterval(timer);
-        setProgress((p) => ({ ...p, upload: 100 }));
-        r(null);
-      }, 2000);
+    await fetch("/upload/" + hash, {
+      method: "POST",
+      body: formData,
     });
+
+    setProgress((p) => ({ ...p, upload: 100 }));
   };
 
   const keepCheckingScan = (hash: string) => {
