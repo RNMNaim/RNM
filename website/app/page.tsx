@@ -110,10 +110,12 @@ export default function Home() {
     let i = 0;
     while (label == null) {
       const response = await fetch(`/api/token/${hash}`);
-      setProgress({ ...progress, scan: i });
+      setProgress({ ...progress, scan: Math.min(i, 90) });
       i += Math.random() * 10;
       const data = await response.json();
       label = data.label;
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
     setProgress({ ...progress, scan: 100 });
 
