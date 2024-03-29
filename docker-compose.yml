@@ -1,0 +1,45 @@
+version: "3"
+services:
+    redis:
+        image: redis:latest
+        ports:
+            - 6379:6379
+
+    server:
+        depends_on:
+            - redis
+        build: server
+        ports:
+            - 3000:3000
+
+    image_uploading:
+        depends_on:
+            - redis
+        build: imageUploading
+        deploy:
+            replicas: 4
+
+
+    worker:
+        depends_on:
+            - image_uploading
+        build: worker
+        env_file:
+            - ./worker/.env
+
+    website:
+        build: website
+
+
+    nginx:
+        image: nginx:latest
+        depends_on:
+            - server
+            - image_uploading
+            - website
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./nginx.config:/etc/nginx/nginx.conf
+

@@ -3,47 +3,48 @@ const fs = require("fs");
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
 
-import * as Storage from "./repositories/storage";
 import * as AI from "./repositories/ai";
 import type { IJob } from "./types";
 
 const connection = new IORedis({
-  host: "localhost",
-  port: 6379,
-  maxRetriesPerRequest: null,
+    host: "redis",
+    port: 6379,
+    maxRetriesPerRequest: null,
 });
 
 const worker = new Worker(
-  "imageProcessing",
-  async (task: IJob) => {
-    const imagePath = "./tmp/" + task.id;
-    await Storage.downloadFile(task.data.parentId, task.data.path, imagePath);
+    "imageProcessing",
+    async (task: IJob) => {
+        console.log(`http://${task.data.parentId}:3333/${task.data.path}`);
+        const response = await fetch(
+            `http://${task.data.parentId}:3333/${task.data.path}`
+        );
+        const fileBuffer = await response.arrayBuffer();
+        const base64String = Buffer.from(fileBuffer).toString("base64");
 
-    const fileBuffer = fs.readFileSync(imagePath); // todo make it async
-    const base64String = fileBuffer.toString("base64");
+        const text = await AI.generateTextFromMultiData(
+            [base64String],
+            [
+                "give me the name of the food or item be precise and return only one word, when i search with that name the above picture appeas. again only one word and when it's extremly urgent give me second name",
+            ]
+        );
 
-    const text = await AI.generateTextFromMultiData(
-      [base64String],
-      [
-        "give me the name of the food or item be precise and return only one word",
-      ]
-    );
+        console.log(text, task.name);
+        await connection.hset("results", task.name, text);
 
-    await connection.hset("results", task.data.parentId, text);
-
-    await new Promise((res) => setTimeout(res, 1000));
-    return task.data;
-  },
-  {
-    connection,
-    concurrency: 5,
-    limiter: {
-      max: 30,
-      duration: 60 * 1000,
+        await new Promise((res) => setTimeout(res, 1000));
+        return task.data;
     },
-  }
+    {
+        connection,
+        concurrency: 1,
+        limiter: {
+            max: 30,
+            duration: 60 * 1000,
+        },
+    }
 );
 
 worker.on("ready", () => {
-  console.log("Worker(" + worker.name + ") is active id=" + worker.id);
+    console.log("Worker(" + worker.name + ") is active id=" + worker.id);
 });
